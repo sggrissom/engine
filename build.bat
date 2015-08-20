@@ -6,7 +6,7 @@ set release=0
 
 set commonCompilerFlags= -nologo -Gm- -GR- -EHa- -fp:fast -Oi -WX -W4 -DHANDMADE_WIN32=1
 set commonLinkerFlags= -incremental:no -opt:ref
-set win32Libraries= user32.lib
+set win32Libraries= user32.lib gdi32.lib winmm.lib
 
 set ignoredWarnings= -wd4505 -wd4201 -wd4100 -wd4189
 set debugCompilerFlags= %commonCompilerFlags% -MTd -Od %ignoredWarnings% -DHANDMADE_INTERNAL=1 -DHANDMADE_SLOW=1 -FC -Z7

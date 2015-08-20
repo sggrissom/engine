@@ -8,9 +8,12 @@
 #include <windows.h>
 #include <sgg.h>
 
+#include "win32.h"
+#include "sg_xinput.h"
+
 global b32 GlobalRunning;
 global u64 GlobalPerfCountFrequency;
-global screen_buffer *GlobalScreenBuffer;
+global screen_buffer GlobalScreenBuffer;
 
 internal window_dimension
 GetWindowDimension(HWND Window)
@@ -19,8 +22,8 @@ GetWindowDimension(HWND Window)
 
     RECT ClientRect;
     GetClientRect(Window, &ClientRect);
-    Result.width = ClientRect.right - ClientRect.left;
-    Result.height = ClientRect.bottom - ClientRect.top;
+    Result.Width = ClientRect.right - ClientRect.left;
+    Result.Height = ClientRect.bottom - ClientRect.top;
 
     return Result;
 }
@@ -59,14 +62,14 @@ DisplayBufferInWindow(screen_buffer *Buffer,
 }
 
 internal LRESULT CALLBACK
-mainWindowCallback(HWND window,
-                   UINT message,
+mainWindowCallback(HWND Window,
+                   UINT Message,
                    WPARAM wParam,
                    LPARAM lParam)
 {
     LRESULT result = 0;
 
-    switch(message)
+    switch(Message)
     {
         case WM_ACTIVATEAPP:
         {
@@ -78,7 +81,7 @@ mainWindowCallback(HWND window,
         case WM_CLOSE:
         case WM_DESTROY:
         {
-            globalRunning = false;
+            GlobalRunning = false;
         } break;
         
         case WM_SYSKEYDOWN:
@@ -94,14 +97,14 @@ mainWindowCallback(HWND window,
             PAINTSTRUCT Paint;
             HDC DeviceContext = BeginPaint(Window, &Paint);
             window_dimension Dimension = GetWindowDimension(Window);
-            DisplayBufferInWindow(&globalScreenBuffer, DeviceContext,
+            DisplayBufferInWindow(&GlobalScreenBuffer, DeviceContext,
                                   Dimension.Width, Dimension.Height);
             EndPaint(Window, &Paint);
         } break;
 
         default:
         {
-            result = DefWindowProcA(window, message, wParam, lParam);
+            result = DefWindowProcA(Window, Message, wParam, lParam);
         } break;
     }
 
@@ -118,7 +121,7 @@ processPendingMessages(HWND window)
         {
             case WM_QUIT:
             {
-                globalRunning = false;
+                GlobalRunning = false;
             } break;
 
             case WM_SYSKEYDOWN:
@@ -126,9 +129,9 @@ processPendingMessages(HWND window)
             case WM_KEYDOWN:
             case WM_KEYUP:
             {
-                uint32 VKCode = (uint32)message.wParam;
-                bool32 wasDown = (message.lParam & (1 << 30)) != 0;
-                bool32 isDown = (message.lParam & (1 << 31)) == 0;
+                u32 VKCode = (u32)message.wParam;
+                b32 wasDown = (message.lParam & (1 << 30)) != 0;
+                b32 isDown = (message.lParam & (1 << 31)) == 0;
                 if(wasDown != isDown)
                 {
                     if(VKCode == VK_ESCAPE)
@@ -142,7 +145,7 @@ processPendingMessages(HWND window)
                 //NOTE(steven): alt-f4
                 if ((VKCode == VK_F4) && (message.lParam & (1 << 29)))
                 {
-                    globalRunning = false;
+                    GlobalRunning = false;
                 }
             } break;
             default:
@@ -170,15 +173,12 @@ WinMain(HINSTANCE instance,
     LoadXInput();
 
     WNDCLASS windowClass = {};
-  
     windowClass.style = CS_HREDRAW|CS_VREDRAW;
     windowClass.lpfnWndProc = mainWindowCallback;
     windowClass.hInstance = instance;
     windowClass.lpszClassName = "Win32WindowClass";
     windowClass.hCursor = LoadCursor(0, IDC_ARROW);
     windowClass.hIcon = LoadIcon(0, IDI_APPLICATION);
-
-    executeFunction = &execute;
 
     if(RegisterClassA(&windowClass))
     {
@@ -195,9 +195,9 @@ WinMain(HINSTANCE instance,
                 0,0,instance,0);
         if(Window)
         {
-            globalRunning = true;
+            GlobalRunning = true;
 
-            while(globalRunning)
+            while(GlobalRunning)
             {
                 processPendingMessages(Window);
             }

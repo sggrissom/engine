@@ -8,6 +8,10 @@
 
 #include <xinput.h>
 
+struct game_button_state
+{
+};
+
 typedef struct game_controller_input
 {
     b32 IsConnected;
@@ -58,16 +62,16 @@ global x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define XInputSetState XInputSetState_
 
 internal void
-win32LoadXInput()
+LoadXInput()
 {
     HMODULE XInputLibrary = LoadLibraryA("xinput1_4.dll");
     if(!XInputLibrary)
     {
-        XInputLibrary = LoadLibraryAA("xinput9_1_0.dll");
+        XInputLibrary = LoadLibraryA("xinput9_1_0.dll");
     }
     if(!XInputLibrary)
     {
-        XInputLibrary = LoadLibraryAA("xinput1_3.dll");
+        XInputLibrary = LoadLibraryA("xinput1_3.dll");
     }
 
     if(XInputLibrary)
