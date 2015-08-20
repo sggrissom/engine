@@ -38,9 +38,10 @@ typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
     typedef struct game_screen_buffer
     {
         void *Memory;
-        u32 Width;
-        u32 Height;
-        u32 Pitch;
+        s32 Width;
+        s32 Height;
+        s32 Pitch;
+        u32 BytesPerPixel;
     } game_screen_buffer;
 
     typedef struct game_sound_buffer

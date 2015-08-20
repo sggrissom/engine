@@ -438,16 +438,19 @@ ProcessPendingMessages(state *State, controller_input *Keyboard)
 #endif
                 }
 
-                b32 AltKeyIsDown = (Message.lParam & (1 << 29));
-                if ((VKCode == VK_F4) && AltKeyIsDown)
+                if(IsDown)
                 {
-                    GlobalRunning = false;
-                }
-                if((VKCode == VK_RETURN) && AltKeyIsDown)
-                {
-                    if(Message.hwnd)
+                    b32 AltKeyIsDown = (Message.lParam & (1 << 29));
+                    if ((VKCode == VK_F4) && AltKeyIsDown)
                     {
-                        ToggleFullscreen(Message.hwnd);
+                        GlobalRunning = false;
+                    }
+                    if((VKCode == VK_RETURN) && AltKeyIsDown)
+                    {
+                        if(Message.hwnd)
+                        {
+                            ToggleFullscreen(Message.hwnd);
+                        }
                     }
                 }
             } break;
@@ -625,6 +628,7 @@ WinMain(HINSTANCE instance,
                         Buffer.Width = GlobalScreenBuffer.Width;
                         Buffer.Height = GlobalScreenBuffer.Height;
                         Buffer.Pitch = GlobalScreenBuffer.Pitch;
+                        Buffer.BytesPerPixel = GlobalScreenBuffer.BytesPerPixel;
 
                         if(Game.UpdateAndRender)
                         {
