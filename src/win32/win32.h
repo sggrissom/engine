@@ -10,8 +10,8 @@ struct screen_buffer
 {
     BITMAPINFO Info;
     void *Memory;
-    u32 Width;
-    u32 Height;
+    s32 Width;
+    s32 Height;
     u32 Pitch;
     u32 BytesPerPixel;
 };
@@ -28,6 +28,7 @@ struct game_code
     FILETIME DLLLastWriteTime;
 
     //NOTE(steven): include any functions the platform layer must call from the DLL
+    game_update_and_render *UpdateAndRender;
 
     b32 IsValid;
 };
@@ -52,7 +53,7 @@ struct state
     HANDLE PlaybackHandle;
     u32 InputPlayingIndex;
 
-    char EXE_Path[WIN32_FILENAME_COUNT];
+    char EXEPath[WIN32_FILENAME_COUNT];
     char *EXEFilename;
 };
 
