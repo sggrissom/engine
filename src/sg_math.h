@@ -1,3 +1,4 @@
+
 #if !defined(SG_MATH_H)
 /* ========================================================================
    $File: $
@@ -108,6 +109,14 @@ operator-(v2 A, v2 B)
     return(Result);
 }
 
+inline v2 &
+operator-=(v2 &A, v2 B)
+{
+    A = A - B;
+
+    return A;
+}
+
 inline v3
 operator*(r32 A, v3 B)
 {
@@ -212,6 +221,36 @@ inline r32
 LengthSq(v2 A)
 {
     r32 Result = Inner(A, A);
+    return Result;
+}
+
+
+struct bit_scan_result
+{
+    b32 Found;
+    u32 Index;
+};
+inline bit_scan_result
+FindLeastSignificantSetBit(u32 Value)
+{
+    bit_scan_result Result = {};
+
+#if COMPILER_MSVC
+    Result.Found = _BitScanForward((unsigned long *)&Result.Index, Value);
+#else
+    for(u32 Test = 0;
+        Test < 32;
+        ++Test)
+    {
+        if(Value & (1 << Test))
+        {
+            Result.Index = Test;
+            Result.Found = true;
+            break;
+        }
+    }
+#endif
+
     return Result;
 }
 

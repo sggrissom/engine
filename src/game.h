@@ -10,21 +10,116 @@
 #include "sg_platform.h"
 #include "sg_math.h"
 
-struct controlled_player
+struct loaded_bitmap
 {
-    v3 P;
+    s32 Width;
+    s32 Height;
+    u32 *Pixels;
+};
+
+struct sim_entity
+{
     v3 dP;
     v3 ddP;
     r32 Height;
     r32 Width;
-    u32 PlayerIndex;
+};
+
+enum entity_type
+{
+    EntityType_Null,
+    EntityType_Hero,
+    EntityType_Wall,
+};
+
+struct entity
+{
+    v3 P;
+    sim_entity SimEntity;
+};
+
+struct controlled_player
+{
+    u32 EntityIndex;
 };
 
 struct game_state
 {
-    u32 PlayerCount;
-    controlled_player Players[5];
+    loaded_bitmap Backdrop;
+
+    controlled_player Players[ArrayCount(((game_input*)0)->Controllers)];
+
+    u32 EntityCount;
+    entity Entities[128];
 };
+
+inline entity *
+GetEntity(game_state *GameState, u32 EntityIndex)
+{
+    entity *Result = 0;
+
+    if((EntityIndex > 0) && (EntityIndex < GameState->EntityCount))
+    {
+        Result = GameState->Entities + EntityIndex;
+    }
+
+    return Result;
+}
+
+inline controlled_player *
+GetPlayer(game_state *GameState, u32 ControllerIndex)
+{
+    controlled_player *Result = 0;
+
+    if((ControllerIndex > 0) && (ControllerIndex < ArrayCount(GameState->Players)))
+    {
+        Result = GameState->Players + ControllerIndex;
+        //Result = GetEntity(GameState, Player->EntityIndex);
+    }
+
+    return Result;
+}
+
+struct add_entity_result
+{
+    entity *Entity;
+    u32 EntityIndex;
+};
+
+internal add_entity_result
+AddEntity(game_state *GameState, entity_type Type, v3 P = {})
+{
+    add_entity_result Result;
+    
+    Assert(GameState->EntityCount < ArrayCount(GameState->Entities));
+    u32 EntityIndex = GameState->EntityCount++;
+
+    entity *Entity = GameState->Entities + EntityIndex;
+    *Entity = {};
+   
+    Entity->P = P;
+
+    Result.Entity = Entity;
+    Result.EntityIndex = EntityIndex;
+
+    return Result;
+}
+
+internal add_entity_result
+AddPlayer(game_state *GameState, u32 ControllerIndex, v3 P = v3{1.0f,1.0f, 0.0f})
+{
+    controlled_player *Player = GameState->Players + ControllerIndex;
+    *Player = {};
+
+    add_entity_result EntityResult = AddEntity(GameState, EntityType_Hero, P);
+
+    Player->EntityIndex = EntityResult.EntityIndex;
+
+    EntityResult.Entity->SimEntity.Width = 1.0f;
+    EntityResult.Entity->SimEntity.Height = 1.0f;
+
+    return EntityResult;
+}
 
 #define GAME_H
 #endif
