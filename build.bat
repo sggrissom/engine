@@ -31,6 +31,6 @@ echo WAITING FOR PDB > lock.tmp
 cl %compilerFlags% ..\src\game.cpp -LD /link %commonLinkerFlags% -PDB:handmade_%random%.pdb %export%
 del lock.tmp
 
-cl %compilerFlags% /I w:\handmade\src ..\src\win32\win32.cpp /link %commonLinkerFlags% %win32Libraries%
+cl %compilerFlags% /I w:\engine\src ..\src\win32\win32.cpp /link %commonLinkerFlags% %win32Libraries%
 
 popd

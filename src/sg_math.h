@@ -184,7 +184,6 @@ inline s32
 RoundR32ToS32(r32 Real)
 {
     s32 Result = (s32)roundf(Real);
-
     return Result;
 }
 
@@ -192,7 +191,13 @@ inline u32
 RoundR32ToU32(r32 Real)
 {
     u32 Result = (u32)roundf(Real);
+    return Result;
+}
 
+inline r32
+Square(r32 A)
+{
+    r32 Result = A * A;
     return Result;
 }
 
@@ -200,7 +205,6 @@ inline r32
 Inner(v2 A, v2 B)
 {
     r32 Result = A.x*B.x + A.y*B.y;
-
     return Result;
 }
 
@@ -208,7 +212,6 @@ inline r32
 LengthSq(v2 A)
 {
     r32 Result = Inner(A, A);
-
     return Result;
 }
 
