@@ -23,6 +23,7 @@ struct sim_entity
     v3 ddP;
     r32 Height;
     r32 Width;
+    v3 Color;
 };
 
 enum entity_type
@@ -71,7 +72,7 @@ GetPlayer(game_state *GameState, u32 ControllerIndex)
 {
     controlled_player *Result = 0;
 
-    if((ControllerIndex > 0) && (ControllerIndex < ArrayCount(GameState->Players)))
+    if((ControllerIndex >= 0) && (ControllerIndex < ArrayCount(GameState->Players)))
     {
         Result = GameState->Players + ControllerIndex;
         //Result = GetEntity(GameState, Player->EntityIndex);
@@ -87,7 +88,7 @@ struct add_entity_result
 };
 
 internal add_entity_result
-AddEntity(game_state *GameState, entity_type Type, v3 P = {})
+AddEntity(game_state *GameState, entity_type Type, v3 Color = {}, v3 P = {})
 {
     add_entity_result Result;
     
@@ -98,6 +99,7 @@ AddEntity(game_state *GameState, entity_type Type, v3 P = {})
     *Entity = {};
    
     Entity->P = P;
+    Entity->SimEntity.Color = Color;
 
     Result.Entity = Entity;
     Result.EntityIndex = EntityIndex;
@@ -111,7 +113,7 @@ AddPlayer(game_state *GameState, u32 ControllerIndex, v3 P = v3{1.0f,1.0f, 0.0f}
     controlled_player *Player = GameState->Players + ControllerIndex;
     *Player = {};
 
-    add_entity_result EntityResult = AddEntity(GameState, EntityType_Hero, P);
+    add_entity_result EntityResult = AddEntity(GameState, EntityType_Hero, {0,0,1}, P);
 
     Player->EntityIndex = EntityResult.EntityIndex;
 
@@ -119,6 +121,17 @@ AddPlayer(game_state *GameState, u32 ControllerIndex, v3 P = v3{1.0f,1.0f, 0.0f}
     EntityResult.Entity->SimEntity.Height = 1.0f;
 
     return EntityResult;
+}
+
+internal add_entity_result
+AddWall(game_state *GameState, v3 P)
+{
+    add_entity_result Result = AddEntity(GameState, EntityType_Wall, v3{1.0f,0.0f,0.0f}, P);
+
+    Result.Entity->SimEntity.Width = 0.5f;
+    Result.Entity->SimEntity.Height = 0.5f;
+
+    return Result;
 }
 
 #define GAME_H

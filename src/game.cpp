@@ -227,7 +227,11 @@ MovePlayer(game_state *GameState, entity *Player, r32 dt, r32 Speed)
     Player->SimEntity.dP = Player->SimEntity.ddP*dt + Player->SimEntity.dP;
     v3 NewPlayerP = OldPlayerP + PlayerDelta;
 
-    if(NewPlayerP.z < 0) NewPlayerP.z = 0;
+    if(NewPlayerP.z < 0)
+    {
+        NewPlayerP.z = 0;
+        Player->SimEntity.dP.z = Player->SimEntity.ddP.z = 0;
+    }
 
     Player->P = NewPlayerP;
 }
@@ -243,10 +247,15 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     if(!Memory->IsInitialized)
     {
+        AddEntity(GameState, EntityType_Null);
+        
         /*
         GameState->Backdrop =
             DEBUGLoadBitmap(Thread, Memory->DEBUGPlatformReadEntireFile, "w:/engine/data/test24.bmp");
         */
+
+
+        AddWall(GameState, v3{2.0f, 2.0f});
         
         for(u32 PlayerIndex = 0;
             PlayerIndex < ArrayCount(GameState->Players);
@@ -274,37 +283,37 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         else
         {
             entity *EntPlayer = GetEntity(GameState, Player->EntityIndex);
-            sim_entity SimPlayer = EntPlayer->SimEntity;
+            sim_entity *SimPlayer = &EntPlayer->SimEntity;
             
-            SimPlayer.ddP = {0,0,-9.8f};
+            SimPlayer->ddP = {0,0,-9.8f};
             
             if(Controller->IsAnalog)
             {
-                SimPlayer.ddP = v3{Controller->StickAverageX, Controller->StickAverageY, -9.8f};
+                SimPlayer->ddP = v3{Controller->StickAverageX, Controller->StickAverageY, -9.8f};
             }
             else
             {
                 if(Controller->MoveUp.EndedDown)
                 {
-                    SimPlayer.ddP.y = 1.0f;
+                    SimPlayer->ddP.y = 1.0f;
                 }
                 if(Controller->MoveDown.EndedDown)
                 {
-                    SimPlayer.ddP.y = -1.0f;
+                    SimPlayer->ddP.y = -1.0f;
                 }
                 if(Controller->MoveLeft.EndedDown)
                 {
-                    SimPlayer.ddP.x = -1.0f;
+                    SimPlayer->ddP.x = -1.0f;
                 }
                 if(Controller->MoveRight.EndedDown)
                 {
-                    SimPlayer.ddP.x = 1.0f;
+                    SimPlayer->ddP.x = 1.0f;
                 }
             }
 
             if(Controller->Start.EndedDown && EntPlayer->P.z == 0)
             {
-                SimPlayer.dP.z = 3.0f;
+                SimPlayer->dP.z = 3.0f;
             }
 
             MovePlayer(GameState, EntPlayer, Input->dtForFrame, PlayerSpeed);
@@ -322,29 +331,26 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
     DrawBitmap(Buffer, &GameState->Backdrop, v2{0,0});
     
-    for(u32 PlayerIndex = 0;
-        PlayerIndex <= ArrayCount(GameState->Players);
-        ++PlayerIndex)
+    for(u32 EntityIndex = 1;
+        EntityIndex < GameState->EntityCount;
+        ++EntityIndex)
     {
-        controlled_player *Player = GetPlayer(GameState, PlayerIndex);
-        if(Player->EntityIndex)
+        entity *Entity = GetEntity(GameState, EntityIndex);
+        if(Entity)
         {
-            entity *Entity = GetEntity(GameState, Player->EntityIndex);
-        
-            r32 PlayerGroundPointX = ScreenCenterX + MetersToPixels*Entity->P.x;
-            r32 PlayerGroundPointY = ScreenCenterY - MetersToPixels*Entity->P.y;
+            r32 GroundPointX = ScreenCenterX + MetersToPixels*Entity->P.x;
+            r32 GroundPointY = ScreenCenterY - MetersToPixels*Entity->P.y;
 
-            r32 Z = -MetersToPixels*Entity->P.z;
-            v2 PlayerLeftTop = {PlayerGroundPointX - 0.5f*MetersToPixels*Entity->SimEntity.Width,
-                                PlayerGroundPointY - 0.5f*MetersToPixels*Entity->SimEntity.Height};
+            v2 LeftTop = {GroundPointX - 0.5f*MetersToPixels*Entity->SimEntity.Width,
+                                GroundPointY - 0.5f*MetersToPixels*Entity->SimEntity.Height};
             
-            v2 PlayerWidthHeight = {Entity->SimEntity.Width, Entity->SimEntity.Height};
+            v2 WidthHeight = {Entity->SimEntity.Width, Entity->SimEntity.Height};
 
-            Color = {0, 0, 1.0f};
+            Color = Entity->SimEntity.Color;
 
             DrawRectangle(Buffer,
-                          PlayerLeftTop,
-                          PlayerLeftTop + MetersToPixels*PlayerWidthHeight,
+                          LeftTop,
+                          LeftTop + MetersToPixels*WidthHeight,
                           Color);
         }
     }
