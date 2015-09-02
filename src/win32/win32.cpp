@@ -242,11 +242,11 @@ internal void
 DisplayBufferInWindow(screen_buffer *Buffer,
                       HDC DeviceContext, s32 WindowWidth, s32 WindowHeight)
 {
-    if((WindowWidth >= Buffer->Width*2) &&
-       (WindowHeight >= Buffer->Height*2))
+    if((WindowWidth >= Buffer->Width*1.5f) &&
+       (WindowHeight >= Buffer->Height*1.5f))
     {
         StretchDIBits(DeviceContext,
-                      0, 0, 2*Buffer->Width, 2*Buffer->Height,
+                      0, 0, WindowWidth, WindowHeight,
                       0, 0, Buffer->Width, Buffer->Height,
                       Buffer->Memory,
                       &Buffer->Info,

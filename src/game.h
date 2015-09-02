@@ -8,6 +8,7 @@
 
 #include <sgg.h>
 #include "sg_platform.h"
+#include "sg_vector.h"
 #include "sg_math.h"
 
 struct loaded_bitmap
@@ -19,8 +20,8 @@ struct loaded_bitmap
 
 struct sim_entity
 {
-    v3 dP;
-    v3 ddP;
+    v2 dP;
+    v2 ddP;
     r32 Height;
     r32 Width;
     v3 Color;
@@ -35,7 +36,7 @@ enum entity_type
 
 struct entity
 {
-    v3 P;
+    v2 P;
     sim_entity SimEntity;
 };
 
@@ -51,7 +52,7 @@ struct game_state
     controlled_player Players[ArrayCount(((game_input*)0)->Controllers)];
 
     u32 EntityCount;
-    entity Entities[128];
+    entity Entities[10000];
 };
 
 inline entity *
@@ -88,7 +89,7 @@ struct add_entity_result
 };
 
 internal add_entity_result
-AddEntity(game_state *GameState, entity_type Type, v3 Color = {}, v3 P = {})
+AddEntity(game_state *GameState, entity_type Type, v3 Color = {}, v2 P = {})
 {
     add_entity_result Result;
     
@@ -108,7 +109,7 @@ AddEntity(game_state *GameState, entity_type Type, v3 Color = {}, v3 P = {})
 }
 
 internal add_entity_result
-AddPlayer(game_state *GameState, u32 ControllerIndex, v3 P = v3{1.0f,1.0f, 0.0f})
+AddPlayer(game_state *GameState, u32 ControllerIndex, v2 P = v2{1.0f,1.0f})
 {
     controlled_player *Player = GameState->Players + ControllerIndex;
     *Player = {};
@@ -124,7 +125,7 @@ AddPlayer(game_state *GameState, u32 ControllerIndex, v3 P = v3{1.0f,1.0f, 0.0f}
 }
 
 internal add_entity_result
-AddWall(game_state *GameState, v3 P)
+AddWall(game_state *GameState, v2 P)
 {
     add_entity_result Result = AddEntity(GameState, EntityType_Wall, v3{1.0f,0.0f,0.0f}, P);
 

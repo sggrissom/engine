@@ -207,33 +207,135 @@ DrawRectangle(game_screen_buffer *Buffer, v2 vMin, v2 vMax, v3 ColorVector)
     }
 }
 
+internal b32
+TestWall(r32 WallX, r32 RelX, r32 RelY, r32 PlayerDeltaX, r32 PlayerDeltaY,
+         r32 *tMin, r32 MinY, r32 MaxY)
+{
+    b32 Hit = false;
+
+    r32 tEpsilon = 0.001f;
+
+    if(PlayerDeltaX != 0.0f)
+    {
+        r32 tResult = (WallX - RelX) / PlayerDeltaX;
+        r32 Y = RelY + tResult*PlayerDeltaY;
+        if((tResult >= 0.0f) && (*tMin > tResult))
+        {
+            if((Y >= MinY) && (Y <= MaxY))
+            {
+                *tMin = Maximum(0.0f, tResult - tEpsilon);
+                Hit = true;
+            }
+        }
+    }
+    
+    return Hit;
+}
+
 internal void
 MovePlayer(game_state *GameState, entity *Player, r32 dt, r32 Speed)
 {
-    v2 twoDimentionDDP = v2{Player->SimEntity.ddP.x, Player->SimEntity.ddP.y};
-    r32 ddPLength = LengthSq(twoDimentionDDP);
+    r32 ddPLength = LengthSq(Player->SimEntity.ddP);
     if(ddPLength > 1.0f)
     {
-        twoDimentionDDP *= (1.0f / (r32)sqrt(ddPLength));
+        Player->SimEntity.ddP *= (1.0f / (r32)sqrt(ddPLength));
     }
 
-    twoDimentionDDP *= Speed;
-    twoDimentionDDP += -8.0f*v2{Player->SimEntity.dP.x, Player->SimEntity.dP.y};
-    Player->SimEntity.ddP = v3{twoDimentionDDP.x, twoDimentionDDP.y, Player->SimEntity.ddP.z};
+    Player->SimEntity.ddP *= Speed;
     
-    v3 OldPlayerP = Player->P;
-    v3 PlayerDelta = (0.5f*Player->SimEntity.ddP*Square(dt) +
+    Player->SimEntity.ddP += -8.0f*Player->SimEntity.dP;
+    
+    v2 OldPlayerP = Player->P;
+    v2 PlayerDelta = (0.5f*Player->SimEntity.ddP*Square(dt) +
                       Player->SimEntity.dP*dt);
     Player->SimEntity.dP = Player->SimEntity.ddP*dt + Player->SimEntity.dP;
-    v3 NewPlayerP = OldPlayerP + PlayerDelta;
-
-    if(NewPlayerP.z < 0)
+    
+    v2 DesiredPosition = OldPlayerP + PlayerDelta;
+    
+    for(u32 Iteration = 0;
+        Iteration < 4;
+        ++Iteration)
     {
-        NewPlayerP.z = 0;
-        Player->SimEntity.dP.z = Player->SimEntity.ddP.z = 0;
+        r32 tMin = 1.0f;
+        v2 WallNormal = {};
+        u32 HitEntityIndex = 0;
+
+        for(u32 TestEntityIndex = 1;
+            TestEntityIndex < GameState->EntityCount;
+            ++TestEntityIndex)
+        {
+            entity *TestEntity = GetEntity(GameState, TestEntityIndex);
+            if(TestEntity)
+            {
+                r32 DiameterW = TestEntity->SimEntity.Width + Player->SimEntity.Width;
+                r32 DiameterH = TestEntity->SimEntity.Height + Player->SimEntity.Height;
+
+                v2 MinCorner = -0.5*v2{DiameterW, DiameterH};
+                v2 MaxCorner = 0.5*v2{DiameterW, DiameterH};
+
+                v2 Rel = Player->P - TestEntity->P;
+
+                if(TestWall(MinCorner.x, Rel.x, Rel.y, PlayerDelta.x, PlayerDelta.y,
+                            &tMin, MinCorner.y, MaxCorner.y))
+                {
+                    WallNormal = v2{-1,0};
+                    HitEntityIndex = TestEntityIndex;
+                }
+                if(TestWall(MaxCorner.x, Rel.x, Rel.y, PlayerDelta.x, PlayerDelta.y,
+                            &tMin, MinCorner.y, MaxCorner.y))
+                {
+                    WallNormal = v2{1,0};
+                    HitEntityIndex = TestEntityIndex;
+                }
+                if(TestWall(MinCorner.y, Rel.y, Rel.x, PlayerDelta.y, PlayerDelta.x,
+                            &tMin, MinCorner.x, MaxCorner.x))
+                {
+                    WallNormal = v2{0,-1};
+                    HitEntityIndex = TestEntityIndex;
+                }
+                if(TestWall(MaxCorner.y, Rel.y, Rel.x, PlayerDelta.y, PlayerDelta.x,
+                            &tMin, MinCorner.x, MaxCorner.x))
+                {
+                    WallNormal = v2{0,1};
+                    HitEntityIndex = TestEntityIndex;
+                }
+            }
+        }
+
+        Player->P += tMin*PlayerDelta;
+        if(HitEntityIndex)
+        {
+            Player->SimEntity.dP = Player->SimEntity.dP - 1*Inner(Player->SimEntity.dP, WallNormal)*WallNormal;
+            PlayerDelta = DesiredPosition - Player->P;
+            PlayerDelta = PlayerDelta - 1*Inner(PlayerDelta, WallNormal)*WallNormal;
+        }
+        else
+        {
+            break;
+        }
+    }
+    
+    Player->P = OldPlayerP + PlayerDelta;
+}
+
+internal void
+Reset(game_state *GameState)
+{
+    for(u32 EntityIndex = 0;
+        EntityIndex < GameState->EntityCount;
+        ++EntityIndex)
+    {
+        *(GameState->Entities + EntityIndex) = {};
     }
 
-    Player->P = NewPlayerP;
+    GameState->EntityCount = 0;
+        
+    for(u32 PlayerIndex = 0;
+        PlayerIndex < ArrayCount(GameState->Players);
+        ++PlayerIndex)
+    {
+        *(GameState->Players + PlayerIndex) = {};
+    }
 }
 
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
@@ -251,11 +353,32 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         
         /*
         GameState->Backdrop =
-            DEBUGLoadBitmap(Thread, Memory->DEBUGPlatformReadEntireFile, "w:/engine/data/test24.bmp");
+            DEBUGLoadBitmap(Thread, Memory->DEBUGPlatformReadEntireFile, "w:/engine/data/test.bmp");
         */
 
+        r32 HalfWallWidth = 0.5f * 0.5f;
+        r32 BoxWidth = 8;
+        r32 BoxHeight = 5;
 
-        AddWall(GameState, v3{2.0f, 2.0f});
+        for(r32 X = -BoxWidth;
+            X <= BoxWidth;
+            X += HalfWallWidth)
+        {
+            for(r32 Y = -BoxHeight;
+                Y <= BoxHeight;
+                Y += HalfWallWidth)
+            {
+                if(X == -BoxWidth ||
+                   X == BoxWidth ||
+                   Y == -BoxHeight ||
+                   Y == BoxHeight)
+                {
+                    AddWall(GameState, v2{X, Y});
+                }
+            }
+        }
+
+        AddWall(GameState, v2{2.0f, 2.0f});
         
         for(u32 PlayerIndex = 0;
             PlayerIndex < ArrayCount(GameState->Players);
@@ -284,12 +407,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         {
             entity *EntPlayer = GetEntity(GameState, Player->EntityIndex);
             sim_entity *SimPlayer = &EntPlayer->SimEntity;
-            
-            SimPlayer->ddP = {0,0,-9.8f};
-            
+            SimPlayer->ddP = {};
+
             if(Controller->IsAnalog)
             {
-                SimPlayer->ddP = v3{Controller->StickAverageX, Controller->StickAverageY, -9.8f};
+                SimPlayer->ddP = v2{Controller->StickAverageX, Controller->StickAverageY};
             }
             else
             {
@@ -309,14 +431,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 {
                     SimPlayer->ddP.x = 1.0f;
                 }
-            }
 
-            if(Controller->Start.EndedDown && EntPlayer->P.z == 0)
+                if(Controller->Back.EndedDown)
+                {
+                    Reset(GameState);
+                    Memory->IsInitialized = false;
+                }
+            }
+            if(Memory->IsInitialized)
             {
-                SimPlayer->dP.z = 3.0f;
+                MovePlayer(GameState, EntPlayer, Input->dtForFrame, PlayerSpeed);
             }
-
-            MovePlayer(GameState, EntPlayer, Input->dtForFrame, PlayerSpeed);
         }
     }
 
